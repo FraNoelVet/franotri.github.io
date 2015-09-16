@@ -1,0 +1,124 @@
+---
+title: "Practical Machine Learning course project"
+author: "Franck NOEL"
+date: "15 septembre 2015"
+output: html_document
+---
+
+##Synopsis
+Our aim, in this exercise, is to use machine learning tools to build an algorithm of classification on the "classe" variable.
+This variable is the classification of a way to perform  weight lifting exercise. The 5 classes correspond to a well performed exercise (Classe A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+Data used for prediction were collected by different accelerometers. Those data were made available from http://groupware.les.inf.puc-rio.br/har. 
+
+##Loading data set 
+Data were loaded in work directory from https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv for the training set, and from 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv for the test data, used for the programming assignment.
+
+Loading data in convenient variables. In the same time, 
+```r 
+DB<-read.csv("pml-training.csv",header=T,na.strings=c("NA",""))
+testing<-read.csv("pml-testing.csv",header=T,na.strings=c("NA",""))
+
+library(caret)
+library(doParallel)
+library(randomForest)
+```
+
+##cleaning data
+
+A first overview of these data (using str() and summary() : results were not really easily readable, so I chose not to display it) show that for some variables, there is a lot of NAs and other issues, so it needs to be cleaned up.
+
+First step, is to get rid of Nas
+I create a colNA vector that counts the number of NAs in each column.
+
+```{r, echo=T} 
+essai<-is.na(DB)
+colNA<-colSums(essai)
+table(colNA)
+```
+
+Using colNA, variables with a majority of NAs are discarded, as they would not be contributive. 
+
+```{r, echo=T}
+db1<-DB[,colNA==0]
+```
+Next step is to discard variables with very few variability: they are selected using the near zero variance function. 
+
+```{r, echo=T} 
+nsv<-nearZeroVar(db1)
+db2<-db1[,-nsv]
+```
+Last step is to discard 6 variables that are not meaningless for our analysis ('X', 'user_name', time stamps and 'new_window')
+
+```{r, echo=T}
+db<-db2[,-c(1:6)]
+``` 
+
+Now we have a dataset ready for analysis.
+
+##dataset partitioning
+ 
+As we need to partition our data between test and training we will use the classical createDataPartition() function for a 60/40% partitioning.
+I set seed for repeatability.
+
+```{r, echo=T} 
+set.seed(2875)
+sub<-createDataPartition(db$classe,p=0.6,list=F)
+trainsub<-db[sub,]
+testsub<-db[-sub,]
+```
+Let's check size for training dataset (trainsub):
+
+```{r, echo=T} 
+dim(trainsub)
+```
+And the same for the testing dataset (traintest):
+```{r, echo=T} 
+dim(testsub)
+```
+
+This is what we were expecting.
+
+##Model fitting
+
+The choice of model, is based on accuracy. After fitting some models of classification presented in courses, as simple tree model (method = "rpart"), boosting model (method = "gbm"), random forest (method = "rf" with and without pca preprocessing), and even a combined model of the previous ones, the best choice was the random forest model without acp preprocessing.  
+As fitting this model is pretty time consuming for computers, I rely on parallel processing.
+
+
+```{r, echo=T} 
+cores <- makeCluster(detectCores())
+registerDoParallel(cores)
+fitrf<-train(classe~.,data=trainsub,method="rf", trControl = trainControl(allowParallel=TRUE))
+fitrf
+```
+More than 98.5% of accuracy is pretty good. Let's hope it is not overfitted.
+
+## Cross validation
+
+Now that the model is fitted, it is checked with the test part.
+On this dataset (no need to clean it as it was done before partitioning), we apply the model to predict the 'classe' column.
+
+```{r, echo=T}  
+prev<-predict(fitrf,testsub)
+```
+
+And now, the check is to compare predicted vs real classification:
+
+```{r, echo=T}  
+confusionMatrix(prev,testsub$classe)
+```
+
+99.12 % of accuracy is pretty satisfying, as it corresponds to an estimated out-of-sample error 0.88 %. Also, this model doesn't seem to be overfitted on training set. 
+
+This algorithm seems to be pretty accurate to predict if a weighing exercise is well performed or to indicate which error is made, on the basis of accelerometers recordings.   
+So now, let's apply this model to the downloaded test set (after having applied to it the same cleaning preparation)
+
+```{r, echo=T}  
+test1<-testing[,colNA==0]
+test2<-test1[,-nsv]
+testingfinal<-test2[,-c(1:6)]
+prev<-predict(fitrf,testingfinal)
+prev
+```
+
+
