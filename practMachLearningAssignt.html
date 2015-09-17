@@ -74,7 +74,20 @@ img {
 <div id="loading-data-set" class="section level2">
 <h2>Loading data set</h2>
 <p>Data were loaded in work directory from <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a> for the training set, and from <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv" class="uri">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a> for the test data, used for the programming assignment.</p>
-<p>Loading data in convenient variables. In the same time, ````</p>
+<p>Loading data in convenient variables. In the same time, loading the packages that will be needed for this analysis.</p>
+<pre class="r"><code>DB&lt;-read.csv(&quot;pml-training.csv&quot;,header=T,na.strings=c(&quot;NA&quot;,&quot;&quot;))
+testing&lt;-read.csv(&quot;pml-testing.csv&quot;,header=T,na.strings=c(&quot;NA&quot;,&quot;&quot;))
+
+library(caret)</code></pre>
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2</code></pre>
+<pre class="r"><code>library(doParallel)</code></pre>
+<pre><code>## Loading required package: foreach
+## Loading required package: iterators
+## Loading required package: parallel</code></pre>
+<pre class="r"><code>library(randomForest)</code></pre>
+<pre><code>## randomForest 4.6-10
+## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 </div>
 <div id="cleaning-data" class="section level2">
 <h2>cleaning data</h2>
@@ -86,7 +99,7 @@ table(colNA)</code></pre>
 <pre><code>## colNA
 ##     0 19216 
 ##    60   100</code></pre>
-<p>Using colNA, variables with a majority of NAs are discarded, as they would not be contributive.</p>
+<p>This indicates that columns contains either no NA’s at all, or nearly nothing but NA’s.<br />Using colNA, variables with a majority of NAs are discarded, as they would not be contributive.</p>
 <pre class="r"><code>db1&lt;-DB[,colNA==0]</code></pre>
 <p>Next step is to discard variables with very few variability: they are selected using the near zero variance function.</p>
 <pre class="r"><code>nsv&lt;-nearZeroVar(db1)
@@ -129,9 +142,9 @@ fitrf</code></pre>
 ## Resampling results across tuning parameters:
 ## 
 ##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
-##    2    0.9858291  0.9820657  0.001674671  0.002119908
-##   27    0.9864770  0.9828873  0.002077518  0.002628461
-##   52    0.9795795  0.9741605  0.004229795  0.005358244
+##    2    0.9859929  0.9822735  0.001552933  0.001967098
+##   27    0.9866143  0.9830614  0.002168052  0.002741126
+##   52    0.9797361  0.9743586  0.004131661  0.005234348
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 27.</code></pre>
